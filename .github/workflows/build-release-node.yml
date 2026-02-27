@@ -56,8 +56,18 @@ jobs:
           ARTIFACT_NAME=${{ inputs.app_name }}-${BRANCH}-${DATE}.tar.gz
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+          echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          echo "date=$DATE" >> $GITHUB_OUTPUT
 
       - name: Build
+        env:
+          APP_NAME: ${{ inputs.app_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+          BRANCH: ${{ steps.version.outputs.branch }}
+          DATE: ${{ steps.version.outputs.date }}
+          ARTIFACT_NAME: ${{ steps.version.outputs.artifact_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          GITHUB_REF: ${{ github.ref }}
         run: |
           mkdir -p release
           chmod +x ${{ inputs.build_script }}
