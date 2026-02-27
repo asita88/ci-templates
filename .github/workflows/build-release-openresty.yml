@@ -32,7 +32,8 @@ jobs:
           fi
           BRANCH=$(echo '${{ github.ref_name }}' | sed 's/\//-/g')
           DATE=$(date +%Y%m%d)
-          ARTIFACT_NAME=${{ inputs.app_name }}-${BRANCH}-${DATE}
+          SHA=$(echo ${{ github.sha }} | cut -c1-7)
+          ARTIFACT_NAME=${{ inputs.app_name }}-${BRANCH}-${SHA}-${DATE}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
