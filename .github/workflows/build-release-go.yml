@@ -62,7 +62,7 @@ jobs:
           BRANCH=$(echo '${{ github.ref_name }}' | sed 's/\//-/g')
           DATE=$(date +%Y%m%d)
           SHA=$(echo ${{ github.sha }} | cut -c1-7)
-          ARTIFACT_NAME=${{ inputs.app_name }}-${BRANCH}-${SHA}-${DATE}
+          ARTIFACT_NAME=${{ inputs.app_name }}-${BRANCH}-${SHA}-"at"-${DATE}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
           echo "branch=$BRANCH" >> $GITHUB_OUTPUT
@@ -83,22 +83,20 @@ jobs:
           ${{ inputs.build_script }}
 
       - name: Create release archive
-        run: |
-          tar -czf ${{ steps.version.outputs.artifact_name }}.tar.gz -C release .
-          mv ${{ steps.version.outputs.artifact_name }}.tar.gz release/
+        run: tar -czf ${{ steps.version.outputs.artifact_name }}.tar.gz -C release .
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.version.outputs.artifact_name }}
-          path: release/${{ steps.version.outputs.artifact_name }}.tar.gz
+          path: ${{ steps.version.outputs.artifact_name }}.tar.gz
           retention-days: 30
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/${{ steps.version.outputs.artifact_name }}.tar.gz
+          files: ${{ steps.version.outputs.artifact_name }}.tar.gz
           tag_name: ${{ github.ref_name }}
           name: ${{ inputs.app_name }} ${{ github.ref_name }}
           body: |
@@ -122,7 +120,7 @@ jobs:
           host: ${{ vars.DEPLOY_HOST }}
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          source: "${{ needs.build.outputs.artifact_name }}/release/${{ needs.build.outputs.artifact_name }}.tar.gz"
+          source: "${{ needs.build.outputs.artifact_name }}.tar.gz"
           target: "/tmp"
 
       - name: Extract and restart
