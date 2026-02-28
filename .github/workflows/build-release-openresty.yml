@@ -15,7 +15,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     container:
-      image: rockylinux:9
+      image: opencloudos/opencloudos:9.0
     permissions:
       contents: write
     outputs:
