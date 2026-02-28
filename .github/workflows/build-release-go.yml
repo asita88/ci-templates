@@ -112,7 +112,7 @@ jobs:
       - name: Download artifacts
         uses: actions/download-artifact@v4
         with:
-          name: ${{ steps.version.outputs.artifact_name }}
+          name: ${{ needs.build.outputs.artifact_name }}
 
       - name: Deploy to server
         uses: appleboy/scp-action@v0.1.7
