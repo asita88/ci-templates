@@ -14,12 +14,15 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    container:
+      image: quay.io/centos/centos:stream8
     permissions:
       contents: write
     outputs:
       version: ${{ steps.version.outputs.version }}
       artifact_name: ${{ steps.version.outputs.artifact_name }}
     steps:
+      - run: yum install -y git nodejs
       - uses: actions/checkout@v4
 
       - name: Set version
@@ -101,8 +104,10 @@ jobs:
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
+            id nginx &>/dev/null || useradd -r -s /sbin/nologin nginx
             mkdir -p /opt/${{ inputs.app_name }}
             ARTIFACT_NAME='${{ needs.build.outputs.artifact_name }}'
             tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C /opt/${{ inputs.app_name }}
             rm -f /tmp/"$ARTIFACT_NAME.tar.gz"
+            chown -R nginx:nginx /opt/${{ inputs.app_name }}
             /opt/${{ inputs.app_name }}/openresty/nginx/sbin/nginx -s reload -p /opt/${{ inputs.app_name }}/apiok -c /opt/${{ inputs.app_name }}/apiok/conf/nginx.conf 2>/dev/null || true
