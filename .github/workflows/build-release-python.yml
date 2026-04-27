@@ -6,6 +6,10 @@ on:
       app_name:
         required: true
         type: string
+      healthcheck_url:
+        required: false
+        type: string
+        default: ''
       build_script:
         required: false
         type: string
@@ -52,6 +56,10 @@ jobs:
           mkdir -p release
           chmod +x ${{ inputs.build_script }}
           ${{ inputs.build_script }}
+          if [ -f scripts/deploy.sh ]; then
+            cp -f scripts/deploy.sh release/deploy.sh
+            chmod +x release/deploy.sh
+          fi
 
       - name: Create release archive
         run: tar -czf ${{ steps.version.outputs.artifact_name }}.tar.gz -C release .
@@ -61,7 +69,7 @@ jobs:
         with:
           name: ${{ steps.version.outputs.artifact_name }}
           path: ${{ steps.version.outputs.artifact_name }}.tar.gz
-          retention-days: 30
+          retention-days: 1
 
       - name: Create Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -79,6 +87,9 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     environment: production
+    concurrency:
+      group: deploy-${{ github.repository }}-${{ inputs.app_name }}-production
+      cancel-in-progress: true
     steps:
       - name: Download artifacts
         uses: actions/download-artifact@v4
@@ -101,8 +112,28 @@ jobs:
           username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
-            mkdir -p /opt/${{ inputs.app_name }}
+            set -euo pipefail
+            APP_DIR="/opt/${{ inputs.app_name }}"
+            OLD_DIR="$(readlink -f "$APP_DIR/current" 2>/dev/null || true)"
             ARTIFACT_NAME='${{ needs.build.outputs.artifact_name }}'
-            tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C /opt/${{ inputs.app_name }}
+            RELEASE_DIR="$APP_DIR/releases/$ARTIFACT_NAME"
+            echo "[deploy] app=${{ inputs.app_name }} artifact=$ARTIFACT_NAME host=$(hostname) at=$(date -Is)"
+            mkdir -p "$APP_DIR/releases"
+            mkdir -p "$RELEASE_DIR"
+            tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C "$RELEASE_DIR"
             rm -f /tmp/"$ARTIFACT_NAME.tar.gz"
-            supervisorctl restart ${{ inputs.app_name }} || true
+            ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
+            if [ -f "$APP_DIR/current/deploy.sh" ]; then
+              chmod +x "$APP_DIR/current/deploy.sh"
+              APP_DIR="$APP_DIR" CURRENT_DIR="$APP_DIR/current" RELEASE_DIR="$RELEASE_DIR" OLD_DIR="$OLD_DIR" "$APP_DIR/current/deploy.sh"
+            else
+              supervisorctl restart ${{ inputs.app_name }} || true
+            fi
+            if [ -n "${{ inputs.healthcheck_url }}" ]; then
+              for i in {1..30}; do
+                curl -fsS "${{ inputs.healthcheck_url }}" >/dev/null && exit 0
+                sleep 1
+              done
+              echo "healthcheck failed: ${{ inputs.healthcheck_url }}" 1>&2
+              exit 1
+            fi
