@@ -6,10 +6,6 @@ on:
       app_name:
         required: true
         type: string
-      python_version:
-        required: false
-        type: string
-        default: '3.12'
       build_script:
         required: false
         type: string
@@ -25,27 +21,6 @@ jobs:
       artifact_name: ${{ steps.version.outputs.artifact_name }}
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.python_version }}
-
-      - name: Cache pip
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements*.txt', '**/pyproject.toml', '**/Pipfile.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-
-      - name: Install dependencies
-        run: |
-          if [ -f requirements.txt ]; then pip install -r requirements.txt
-          elif [ -f pyproject.toml ]; then pip install -e .
-          elif [ -f Pipfile ]; then pipenv install --deploy
-          else pip install -e . 2>/dev/null || true
-          fi
 
       - name: Set version
         id: version
