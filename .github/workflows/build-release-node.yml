@@ -158,6 +158,7 @@ jobs:
             tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C "$RELEASE_DIR"
             rm -f /tmp/"$ARTIFACT_NAME.tar.gz"
             ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
+            cd "$APP_DIR/current"
             if [ -f "$APP_DIR/current/deploy.sh" ]; then
               chmod +x "$APP_DIR/current/deploy.sh"
               APP_DIR="$APP_DIR" CURRENT_DIR="$APP_DIR/current" RELEASE_DIR="$RELEASE_DIR" OLD_DIR="$OLD_DIR" "$APP_DIR/current/deploy.sh"
