@@ -6,7 +6,7 @@ set -euo pipefail
 : "${RELEASE_DIR:?missing RELEASE_DIR}"
 OLD_DIR="${OLD_DIR:-}"
 
-echo "[deploy.sh] app_dir=$APP_DIR current=$CURRENT_DIR release=$RELEASE_DIR old=${OLD_DIR:-<none>} at=$(date -Is) host=$(hostname)"
+echo "[deploy.sh] app_dir=$APP_DIR deploy_root=$CURRENT_DIR release=$RELEASE_DIR old=${OLD_DIR:-<none>} at=$(date -Is) host=$(hostname)"
 
 copy_if_exists() {
   local src="$1" dst="$2"
