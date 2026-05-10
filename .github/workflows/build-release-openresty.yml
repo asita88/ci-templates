@@ -134,7 +134,24 @@ jobs:
               chmod +x "$APP_ROOT/deploy.sh"
               APP_DIR="$APP_ROOT" CURRENT_DIR="$APP_ROOT" RELEASE_DIR="$RELEASE_DIR" OLD_DIR="$OLD_DIR" "$APP_ROOT/deploy.sh"
             else
-              "$APP_ROOT/openresty/nginx/sbin/nginx" -s reload -p "$APP_ROOT/apiok" -c "$APP_ROOT/apiok/conf/nginx.conf" 2>/dev/null || true
+              NGINX_BIN="$APP_ROOT/openresty/nginx/sbin/nginx"
+              NEW_PREFIX="$APP_ROOT/apiok"
+              NEW_CONF="$APP_ROOT/apiok/conf/nginx.conf"
+              OLD_PREFIX=""
+              OLD_NGINX_BIN=""
+              if [ -n "${OLD_DIR:-}" ] && [ -d "$OLD_DIR/apiok" ]; then
+                OLD_PREFIX="$OLD_DIR/apiok"
+                OLD_NGINX_BIN="$OLD_DIR/openresty/nginx/sbin/nginx"
+              fi
+              if [ -n "$OLD_PREFIX" ] && [ -f "$OLD_PREFIX/logs/nginx.pid" ] && [ -n "$OLD_NGINX_BIN" ]; then
+                "$OLD_NGINX_BIN" -s quit -p "$OLD_PREFIX" -c "$OLD_PREFIX/conf/nginx.conf" 2>/dev/null || true
+                for _ in $(seq 1 60); do
+                  [ ! -f "$OLD_PREFIX/logs/nginx.pid" ] && break
+                  sleep 1
+                done
+              fi
+              mkdir -p "$NEW_PREFIX/logs"
+              "$NGINX_BIN" -p "$NEW_PREFIX" -c "$NEW_CONF"
             fi
             if [ -n "${{ inputs.healthcheck_url }}" ]; then
               for i in {1..30}; do
