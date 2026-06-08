@@ -89,8 +89,14 @@ jobs:
           GITHUB_REF: ${{ github.ref }}
         run: |
           mkdir -p release
-          chmod +x ${{ inputs.build_script }}
-          ${{ inputs.build_script }}
+          BUILD_SCRIPT='${{ inputs.build_script }}'
+          if [ -f "$BUILD_SCRIPT" ]; then
+            chmod +x "$BUILD_SCRIPT"
+            APP_DIR="/opt/${{ inputs.app_name }}" APP_NAME='${{ inputs.app_name }}' "$BUILD_SCRIPT"
+          else
+            APP_DIR="/opt/${{ inputs.app_name }}" APP_NAME='${{ inputs.app_name }}' sh -c 'npm install && npm run build'
+            cp -r dist/. release/
+          fi
           if [ -f scripts/deploy.sh ]; then
             cp -f scripts/deploy.sh release/deploy.sh
             chmod +x release/deploy.sh
@@ -157,7 +163,7 @@ jobs:
             cd "$APP_ROOT"
             if [ -f "$APP_ROOT/deploy.sh" ]; then
               chmod +x "$APP_ROOT/deploy.sh"
-              APP_DIR="$APP_ROOT" CURRENT_DIR="$APP_ROOT" RELEASE_DIR="$APP_ROOT" "$APP_ROOT/deploy.sh"
+              APP_DIR="$APP_ROOT" APP_NAME='${{ inputs.app_name }}' "$APP_ROOT/deploy.sh"
             else
               nginx -s reload 2>/dev/null || true
             fi
