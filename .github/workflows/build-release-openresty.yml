@@ -118,40 +118,32 @@ jobs:
             set -euo pipefail
             id nginx &>/dev/null || useradd -r -s /sbin/nologin nginx
             APP_ROOT="/opt/${{ inputs.app_name }}"
-            RELEASE_ROOT="/opt/releases/${{ inputs.app_name }}"
-            OLD_DIR="$(readlink -f "$APP_ROOT" 2>/dev/null || true)"
             ARTIFACT_NAME='${{ needs.build.outputs.artifact_name }}'
-            RELEASE_DIR="$RELEASE_ROOT/$ARTIFACT_NAME"
+            PREFIX="$APP_ROOT/apiok"
+            NGINX_BIN="$APP_ROOT/openresty/nginx/sbin/nginx"
+            CONF="$PREFIX/conf/nginx.conf"
             echo "[deploy] app=${{ inputs.app_name }} artifact=$ARTIFACT_NAME host=$(hostname) at=$(date -Is)"
-            mkdir -p "$RELEASE_ROOT"
-            mkdir -p "$RELEASE_DIR"
-            tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C "$RELEASE_DIR"
+            if [ -f "$PREFIX/logs/nginx.pid" ] && [ -x "$NGINX_BIN" ]; then
+              "$NGINX_BIN" -s quit -p "$PREFIX" -c "$CONF" 2>/dev/null || true
+              for _ in $(seq 1 60); do
+                [ ! -f "$PREFIX/logs/nginx.pid" ] && break
+                sleep 1
+              done
+            fi
+            mkdir -p "$APP_ROOT"
+            tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C "$APP_ROOT"
             rm -f /tmp/"$ARTIFACT_NAME.tar.gz"
-            chown -R nginx:nginx "$RELEASE_DIR"
-            ln -sfn "$RELEASE_DIR" "$APP_ROOT"
+            chown -R nginx:nginx "$APP_ROOT"
             cd "$APP_ROOT"
             if [ -f "$APP_ROOT/deploy.sh" ]; then
               chmod +x "$APP_ROOT/deploy.sh"
-              APP_DIR="$APP_ROOT" CURRENT_DIR="$APP_ROOT" RELEASE_DIR="$RELEASE_DIR" OLD_DIR="$OLD_DIR" "$APP_ROOT/deploy.sh"
+              APP_DIR="$APP_ROOT" CURRENT_DIR="$APP_ROOT" RELEASE_DIR="$APP_ROOT" "$APP_ROOT/deploy.sh"
             else
               NGINX_BIN="$APP_ROOT/openresty/nginx/sbin/nginx"
-              NEW_PREFIX="$APP_ROOT/apiok"
-              NEW_CONF="$APP_ROOT/apiok/conf/nginx.conf"
-              OLD_PREFIX=""
-              OLD_NGINX_BIN=""
-              if [ -n "${OLD_DIR:-}" ] && [ -d "$OLD_DIR/apiok" ]; then
-                OLD_PREFIX="$OLD_DIR/apiok"
-                OLD_NGINX_BIN="$OLD_DIR/openresty/nginx/sbin/nginx"
-              fi
-              if [ -n "$OLD_PREFIX" ] && [ -f "$OLD_PREFIX/logs/nginx.pid" ] && [ -n "$OLD_NGINX_BIN" ]; then
-                "$OLD_NGINX_BIN" -s quit -p "$OLD_PREFIX" -c "$OLD_PREFIX/conf/nginx.conf" 2>/dev/null || true
-                for _ in $(seq 1 60); do
-                  [ ! -f "$OLD_PREFIX/logs/nginx.pid" ] && break
-                  sleep 1
-                done
-              fi
-              mkdir -p "$NEW_PREFIX/logs"
-              "$NGINX_BIN" -p "$NEW_PREFIX" -c "$NEW_CONF"
+              PREFIX="$APP_ROOT/apiok"
+              CONF="$PREFIX/conf/nginx.conf"
+              mkdir -p "$PREFIX/logs"
+              "$NGINX_BIN" -p "$PREFIX" -c "$CONF"
             fi
             if [ -n "${{ inputs.healthcheck_url }}" ]; then
               for i in {1..30}; do

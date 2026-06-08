@@ -149,20 +149,15 @@ jobs:
           script: |
             set -euo pipefail
             APP_ROOT="/opt/${{ inputs.app_name }}"
-            RELEASE_ROOT="/opt/releases/${{ inputs.app_name }}"
-            OLD_DIR="$(readlink -f "$APP_ROOT" 2>/dev/null || true)"
             ARTIFACT_NAME='${{ needs.build.outputs.artifact_name }}'
-            RELEASE_DIR="$RELEASE_ROOT/$ARTIFACT_NAME"
             echo "[deploy] app=${{ inputs.app_name }} artifact=$ARTIFACT_NAME host=$(hostname) at=$(date -Is)"
-            mkdir -p "$RELEASE_ROOT"
-            mkdir -p "$RELEASE_DIR"
-            tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C "$RELEASE_DIR"
+            mkdir -p "$APP_ROOT"
+            tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C "$APP_ROOT"
             rm -f /tmp/"$ARTIFACT_NAME.tar.gz"
-            ln -sfn "$RELEASE_DIR" "$APP_ROOT"
             cd "$APP_ROOT"
             if [ -f "$APP_ROOT/deploy.sh" ]; then
               chmod +x "$APP_ROOT/deploy.sh"
-              APP_DIR="$APP_ROOT" CURRENT_DIR="$APP_ROOT" RELEASE_DIR="$RELEASE_DIR" OLD_DIR="$OLD_DIR" "$APP_ROOT/deploy.sh"
+              APP_DIR="$APP_ROOT" CURRENT_DIR="$APP_ROOT" RELEASE_DIR="$APP_ROOT" "$APP_ROOT/deploy.sh"
             else
               pm2 restart ${{ inputs.app_name }} || true
             fi

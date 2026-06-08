@@ -76,30 +76,28 @@ def main():
             ssh_key = f.read()
     g = Github(auth=Auth.Token(token))
     # Then play with your Github objects:
-    for repo_obj in g.get_user().get_repos():
-        print(repo_obj.name)
-
-
-    env = environment
-    try:
-        repo_obj = g.get_repo(str(repo))
-
+    for repo in g.get_user().get_repos():
+        print(repo.name)
+        env = environment
         try:
-            env11 = repo_obj.get_environment(environment)
-        except GithubException as e:
-            if e.status != 404:
-                raise
-            env11 = repo.create_environment(environment)
-        except Exception as e:
-            print(e, file=sys.stderr)
-            sys.exit(1)
+            repo_obj = g.get_repo("asita88/" + str(repo.name))
 
-        _set_variable(repo_obj, env, "DEPLOY_USER", deploy_user)
-        _set_variable(repo_obj, env, "DEPLOY_HOST", deploy_host)
-        _set_secret(repo_obj, env, "DEPLOY_SSH_KEY", ssh_key)
-    except GithubException as e:
-        print(e, file=sys.stderr)
-        sys.exit(1)
+            try:
+                env11 = repo_obj.get_environment(environment)
+            except GithubException as e:
+                if e.status != 404:
+                    raise
+                env11 = repo_obj.create_environment(environment)
+            except Exception as e:
+                print(e, file=sys.stderr)
+                sys.exit(1)
+
+            _set_variable(repo_obj, env, "DEPLOY_USER", deploy_user)
+            _set_variable(repo_obj, env, "DEPLOY_HOST", deploy_host)
+            _set_secret(repo_obj, env, "DEPLOY_SSH_KEY", ssh_key)
+        except GithubException as e:
+            print(e, file=sys.stderr)
+            #sys.exit(1)
 
 
 if __name__ == "__main__":
