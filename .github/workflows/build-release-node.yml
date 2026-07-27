@@ -149,7 +149,7 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ vars.DEPLOY_HOST }}
-          username: ${{ vars.3 }}
+          username: ${{ vars.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
