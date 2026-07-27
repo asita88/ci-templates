@@ -144,14 +144,17 @@ jobs:
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ vars.DEPLOY_HOST }}
-          username: ${{ vars.DEPLOY_USER }}
+          username: ${{ vars.3 }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           script: |
             set -euo pipefail
             APP_ROOT="/opt/${{ inputs.app_name }}"
             ARTIFACT_NAME='${{ needs.build.outputs.artifact_name }}'
-            echo "[deploy] app=${{ inputs.app_name }} artifact=$ARTIFACT_NAME host=$(hostname) at=$(date -Is)"
-            mkdir -p "$APP_ROOT"
+            echo "[deploy] app=${{ inputs.app_name }} artifact=$ARTIFACT_NAME user=$(whoami) host=$(hostname) at=$(date -Is)"
+            if [ ! -d "$APP_ROOT" ] || [ ! -w "$APP_ROOT" ]; then
+              sudo mkdir -p "$APP_ROOT"
+              sudo chown -R "$(whoami):$(whoami)" "$APP_ROOT"
+            fi
             tar -xzf /tmp/"$ARTIFACT_NAME.tar.gz" -C "$APP_ROOT"
             rm -f /tmp/"$ARTIFACT_NAME.tar.gz"
             cd "$APP_ROOT"
@@ -159,7 +162,7 @@ jobs:
               chmod +x "$APP_ROOT/deploy.sh"
               APP_DIR="$APP_ROOT" CURRENT_DIR="$APP_ROOT" RELEASE_DIR="$APP_ROOT" "$APP_ROOT/deploy.sh"
             else
-              pm2 restart ${{ inputs.app_name }} || true
+              sudo pm2 restart ${{ inputs.app_name }} || true
             fi
             if [ -n "${{ inputs.healthcheck_url }}" ]; then
               for i in {1..30}; do

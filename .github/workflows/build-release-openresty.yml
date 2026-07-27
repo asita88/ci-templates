@@ -124,7 +124,7 @@ jobs:
             CONF="$PREFIX/conf/nginx.conf"
             echo "[deploy] app=${{ inputs.app_name }} artifact=$ARTIFACT_NAME host=$(hostname) at=$(date -Is)"
             if [ -f "$PREFIX/logs/nginx.pid" ] && [ -x "$NGINX_BIN" ]; then
-              "$NGINX_BIN" -s quit -p "$PREFIX" -c "$CONF" 2>/dev/null || true
+              sudo "$NGINX_BIN" -s quit -p "$PREFIX" -c "$CONF" 2>/dev/null || true
               for _ in $(seq 1 60); do
                 [ ! -f "$PREFIX/logs/nginx.pid" ] && break
                 sleep 1
@@ -143,7 +143,7 @@ jobs:
               PREFIX="$APP_ROOT/apiok"
               CONF="$PREFIX/conf/nginx.conf"
               mkdir -p "$PREFIX/logs"
-              "$NGINX_BIN" -p "$PREFIX" -c "$CONF"
+              sudo "$NGINX_BIN" -p "$PREFIX" -c "$CONF"
             fi
             if [ -n "${{ inputs.healthcheck_url }}" ]; then
               for i in {1..30}; do
